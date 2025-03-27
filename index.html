@@ -3,28 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Basic Solar System</title>
+  <title>Improved Solar System</title>
   <style>
     body { margin: 0; overflow: hidden; }
     canvas { display: block; }
   </style>
 </head>
 <body>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+  <!-- 使用兼容版本 Three.js 和 OrbitControls -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
   <script>
     const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0d0d1a); // 深蓝灰背景
+
     const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, 40, 100);
-    camera.lookAt(0, 0, 0);
+    camera.position.set(0, 60, 100);
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    // Controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = false;
+    controls.minDistance = 20;
+    controls.maxDistance = 200;
+
     // Lighting
-    const light = new THREE.PointLight(0xffffff, 2);
-    light.position.set(0, 0, 0);
-    scene.add(light);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    scene.add(ambientLight);
+
+    const pointLight = new THREE.PointLight(0xffffff, 2);
+    pointLight.position.set(0, 0, 0);
+    scene.add(pointLight);
 
     // Sun
     const sunGeometry = new THREE.SphereGeometry(4, 32, 32);
@@ -32,39 +46,51 @@
     const sun = new THREE.Mesh(sunGeometry, sunMaterial);
     scene.add(sun);
 
-    // Planets
     const planetData = [
       { name: 'Mercury', color: 0x888888, radius: 0.5, distance: 8, speed: 0.04 },
       { name: 'Venus', color: 0xffff99, radius: 0.9, distance: 12, speed: 0.015 },
-      { name: 'Earth', color: 0x0000ff, radius: 1, distance: 16, speed: 0.01 },
-      { name: 'Mars', color: 0xff0000, radius: 0.8, distance: 20, speed: 0.008 },
+      { name: 'Earth', color: 0x3399ff, radius: 1, distance: 16, speed: 0.01 },
+      { name: 'Mars', color: 0xff4444, radius: 0.8, distance: 20, speed: 0.008 },
       { name: 'Jupiter', color: 0xffa500, radius: 2, distance: 28, speed: 0.002 },
       { name: 'Saturn', color: 0xffe4b5, radius: 1.7, distance: 36, speed: 0.001 },
-      { name: 'Uranus', color: 0x00ffff, radius: 1.4, distance: 44, speed: 0.0005 },
-      { name: 'Neptune', color: 0x00008b, radius: 1.3, distance: 52, speed: 0.0003 }
+      { name: 'Uranus', color: 0x66ffff, radius: 1.4, distance: 44, speed: 0.0005 },
+      { name: 'Neptune', color: 0x3366cc, radius: 1.3, distance: 52, speed: 0.0003 }
     ];
 
     const planets = [];
     planetData.forEach(data => {
+      // Planet Mesh
       const geometry = new THREE.SphereGeometry(data.radius, 16, 16);
-      const material = new THREE.MeshBasicMaterial({ color: data.color });
+      const material = new THREE.MeshStandardMaterial({ color: data.color });
       const mesh = new THREE.Mesh(geometry, material);
+      mesh.rotationSpeed = 0.01 * Math.random();
       scene.add(mesh);
       planets.push({ mesh, angle: Math.random() * Math.PI * 2, ...data });
+
+      // Orbit Ring
+      const orbitGeometry = new THREE.RingGeometry(data.distance - 0.02, data.distance + 0.02, 64);
+      const orbitMaterial = new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide });
+      const orbit = new THREE.Mesh(orbitGeometry, orbitMaterial);
+      orbit.rotation.x = Math.PI / 2;
+      scene.add(orbit);
     });
 
+    const clock = new THREE.Clock();
     function animate() {
       requestAnimationFrame(animate);
+      let delta = clock.getDelta();
 
       planets.forEach(p => {
-        p.angle += p.speed;
+        p.angle += p.speed * delta * 60;
         p.mesh.position.set(
           p.distance * Math.cos(p.angle),
           0,
           p.distance * Math.sin(p.angle)
         );
+        p.mesh.rotation.y += p.mesh.rotationSpeed;
       });
 
+      controls.update();
       renderer.render(scene, camera);
     }
 
